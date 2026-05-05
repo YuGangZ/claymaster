@@ -1,0 +1,7 @@
+{
+  "total_timesteps": 18000,
+  "episode_count": 0,
+  "best_reward": -Infinity,
+  "success_rate": 0.0,
+  "timestamp": "2025-12-24T04:49:52.686940"
+}

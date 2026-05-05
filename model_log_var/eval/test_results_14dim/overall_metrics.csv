@@ -1,0 +1,2 @@
+overall_rmse,overall_mae,overall_r2,avg_dim_rmse,avg_dim_r2,avg_dim_relative_error,avg_dim_smape,avg_dim_pearson,avg_dim_snr_db,state_dimension,control_dimension,total_samples,removed_features,retained_features
+0.49678862,0.05890597,0.808540732082305,0.2055186,0.9181404798078543,0.054237608,10.397091717459261,0.9592216270083831,23.164997271129064,14,3,1307,"flatness, convexity","scale_a1, scale_a2, scale_a3, shape_epsilon1, shape_epsilon2, translation_x, translation_y, translation_z, euler_rx, euler_ry, euler_rz, volume, elongation, smoothness"

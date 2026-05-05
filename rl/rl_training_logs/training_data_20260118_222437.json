@@ -1,0 +1,52 @@
+{
+  "episode_rewards": [],
+  "episode_lengths": [],
+  "exploration_rates": [],
+  "loss_history": [],
+  "success_history": [],
+  "timestamps": [],
+  "training_config": {
+    "policy_kwargs": {
+      "net_arch": [
+        256,
+        256
+      ],
+      "use_sde": false
+    },
+    "learning_rate": 0.0003,
+    "buffer_size": 10000,
+    "learning_starts": 200,
+    "batch_size": 128,
+    "tau": 0.005,
+    "gamma": 0.99,
+    "train_freq": 1,
+    "gradient_steps": 2,
+    "max_episode_steps": 100,
+    "action_scale": [
+      0.1,
+      0.1,
+      0.1,
+      0.2,
+      0.2,
+      0.05,
+      0.05,
+      0.05,
+      0.1,
+      0.1,
+      0.1,
+      0.2,
+      0.2,
+      0.2
+    ],
+    "reward_weights": {
+      "goal": 10.0,
+      "time": -1.0,
+      "safety": -10.0,
+      "success": 10.0,
+      "uncertainty": -5.0
+    },
+    "control_dim": 3,
+    "state_dim": 14,
+    "uncertainty_dim": 14
+  }
+}
