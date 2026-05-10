@@ -263,10 +263,8 @@ class RLDeformationTrainer:
 
     def __init__(self, motion_controller, target_shape, log_dir="./rl_training_logs"):
         self.motion_controller = motion_controller
-        if len(target_shape) == 16:
-            self.target_shape = self._convert_16d_to_14d(target_shape)
-        else:
-            self.target_shape = target_shape
+
+        self.target_shape = target_shape
         self.config = RL_CONFIG
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
@@ -277,21 +275,7 @@ class RLDeformationTrainer:
 
         # 可视化器（可选）
         self.visualizer = None
-    @staticmethod
-    def _convert_16d_to_14d(state_16d):
-        """将16维状态转换为14维状态（与mpc_controller.py一致）"""
-        if len(state_16d) >= 16:
-            return np.array([
-                state_16d[0], state_16d[1], state_16d[2],    # scale (3)
-                state_16d[3], state_16d[4],                  # shape (2)
-                state_16d[5], state_16d[6], state_16d[7],    # translation (3)
-                state_16d[8], state_16d[9], state_16d[10],   # rotation (3)
-                state_16d[11],                               # volume (1)
-                state_16d[12],                               # elongation (1)
-                state_16d[14]                                # smoothness (1)
-            ], dtype=np.float32)
-        else:
-            return state_16d  # 如果已经是14维或更少，直接返回
+
     def _create_env(self):
         """创建RL环境"""
 
@@ -443,7 +427,7 @@ class RLDeformationTrainer:
 
                 episode_reward += reward
                 episode_actions.append(action[0].copy())  # 保存动作
-                episode_states.append(obs[0][:16].copy())  # 保存状态
+                episode_states.append(obs[0][:14].copy())  # 保存状态
 
                 if 'uncertainty' in info[0]:
                     episode_uncertainty += np.mean(info[0]['uncertainty'])

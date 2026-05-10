@@ -56,8 +56,8 @@ class DeformationMPC:
         Q[8:11, 8:11] = 0.000 * np.eye(3)  # 旋转
         # 几何特征权重
         Q[11:14, 11:14] = np.diag([0.0,  # 体积
-                                   0.0,  # 细长性
-                                   0])  # 平滑度
+                                0.0,  # 细长性
+                                0])  # 平滑度
         return Q
 
     def set_reference(self, target_state, relative_mode=True):

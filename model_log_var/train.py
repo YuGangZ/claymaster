@@ -23,48 +23,24 @@ def train():
     print(f"X_train shape: {X_train.shape}")
     print(f"y_train shape: {y_train.shape}")
 
-    original_state_train = X_train[:, :16]
-    control_train = X_train[:, 16:]
-
-    dim_names_16 = [
-        'scale_a1', 'scale_a2', 'scale_a3',
-        'shape_epsilon1', 'shape_epsilon2',
-        'translation_x', 'translation_y', 'translation_z',
-        'euler_rx', 'euler_ry', 'euler_rz',
-        'volume', 'elongation', 'flatness', 'smoothness', 'convexity'
-    ]
-
-    for i, name in enumerate(dim_names_16):
-        print(f"  索引 {i:2d}: {name}")
-
-    indices_to_remove = [13, 15]
-    state_train = np.delete(original_state_train, indices_to_remove, axis=1)
-
-    print(f"\n移除的维度: {[dim_names_16[i] for i in indices_to_remove]}")
-    print(f"保留的维度: {[name for i, name in enumerate(dim_names_16) if i not in indices_to_remove]}")
-
-    # 同样处理目标y（下一帧状态）
-    y_train = np.delete(y_train, indices_to_remove, axis=1)
+    state_train = X_train[:, :14]
+    control_train = X_train[:, 14:]
 
     # 验证维度
-    print("\n处理后数据维度:")
+    print("\n数据维度:")
     print(f"state_train shape: {state_train.shape} (期望: (n_samples, 14))")
     print(f"control_train shape: {control_train.shape} (期望: (n_samples, 3))")
     print(f"y_train shape: {y_train.shape} (期望: (n_samples, 14))")
 
-    # 检查维度是否正确
-    if state_train.shape[1] != 14:
-        print(f"警告: 状态维度不是14，实际是 {state_train.shape[1]}")
-    if y_train.shape[1] != 14:
-        print(f"警告: 目标维度不是14，实际是 {y_train.shape[1]}")
-
-    # 打印保留的14维状态名称
-    dim_names_14 = []
-    for i, name in enumerate(dim_names_16):
-        if i not in indices_to_remove:
-            dim_names_14.append(name)
-
-    print(f"\n14维状态名称:")
+    # 14维状态名称（根据之前的选择）
+    dim_names_14 = [
+        'scale_a1', 'scale_a2', 'scale_a3',
+        'shape_epsilon1', 'shape_epsilon2',
+        'translation_x', 'translation_y', 'translation_z',
+        'euler_rx', 'euler_ry', 'euler_rz',
+        'volume', 'elongation', 'smoothness'
+    ]
+    print("\n14维状态名称:")
     for i, name in enumerate(dim_names_14):
         print(f"  索引 {i:2d}: {name}")
 
@@ -75,7 +51,7 @@ def train():
 
     # 打印数据统计信息
     print("\n" + "=" * 60)
-    print("DATA STATISTICS (14维状态，已移除flatness和convexity)")
+    print("DATA STATISTICS")
     print("=" * 60)
 
     # 打印各维度统计
@@ -84,9 +60,6 @@ def train():
         mean_val = state_train[:, i].mean()
         std_val = state_train[:, i].std()
         print(f"  维度 {i}: {dim_names_14[i]}: 均值 = {mean_val:.6f}, 标准差 = {std_val:.6f}")
-
-    if state_train.shape[1] > 5:
-        print(f"  其他维度: ...")
 
     control_mean = control_train.mean(axis=0)
     control_std = control_train.std(axis=0)

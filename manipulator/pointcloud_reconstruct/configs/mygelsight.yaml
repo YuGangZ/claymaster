@@ -1,0 +1,19 @@
+# Device Name
+device_name: "My GelSight"
+# Pixel Per Millimeter
+ppmm: 0.029
+# Desired Image Width and Height
+imgh: 256
+imgw: 256
+# Raw image width, height, and framerate
+raw_imgh: 960
+raw_imgw: 1280
+framerate: 30
+crop_x1: 160
+crop_x2: 1120
+crop_y1: 30
+crop_y2: 930
+camera_matrix: [[465.28398883, 0, 644.03369575],
+               [0, 462.36047133, 475.80469358],
+               [0, 0, 1]]
+dist_coeffs: [0.24424481, -0.28487431, -0.0005922, -0.00183754, 0.08188425]

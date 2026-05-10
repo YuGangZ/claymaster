@@ -3,8 +3,6 @@ import os
 import numpy as np
 from common.base.motion import BaseMotionController, MotionControllerUtils
 from common.base.control_phase_manager import PhaseManager, ApproachPhase, AutonomousControlPhase
-from common.controller.dummy_controller import DummyController
-from common.controller.open_loop_controller import OpenLoopController
 from mpc.mpc_controller import MPCController
 
 
@@ -12,7 +10,7 @@ class MotionManagementRL(BaseMotionController):
     """Motion controller for RL and MPC control with phase management."""
 
     def __init__(self, scene, sensor_cube, elastoplastic_obj, initial_particles,
-                 control_mode='dummy', output_dir="rl_control_data", **controller_kwargs):
+                control_mode='mpc', output_dir="rl_control_data", **controller_kwargs):
         super().__init__(scene, sensor_cube, elastoplastic_obj, initial_particles, output_dir)
 
         # Control mode and parameters
@@ -28,14 +26,14 @@ class MotionManagementRL(BaseMotionController):
         self.phases_initialized = False
 
         # Target state for RL/MPC
-        self.target_16d_state = None
+        self.target_14d_state = None
 
         # 状态估计跟踪
         self.last_estimation_step = -1
         self.force_estimation_next_step = False
 
         # RL/MPC specific
-        self.current_16d_state = None
+        self.current_14d_state = None
         self.control_history = []
         self.print_interval = 50
 
@@ -102,25 +100,15 @@ class MotionManagementRL(BaseMotionController):
                 device=device,
                 horizon=horizon
             )
-
-        elif self.control_mode == 'dummy':
-            gain = controller_kwargs.get('gain', 0.2)
-            max_speed = controller_kwargs.get('max_speed', 0.1)
-            controller = DummyController(gain=gain, max_speed=max_speed)
-
-        elif self.control_mode == 'openloop':
-            trajectory = controller_kwargs.get('trajectory', 'spiral')
-            controller = OpenLoopController(trajectory=trajectory)
-
         else:
             raise ValueError(f"Unknown control mode: {self.control_mode}")
 
         return controller
 
 
-    def set_target_shape(self, target_16d_state):
+    def set_target_shape(self, target_14d_state):
         """Set target shape for RL/MPC control."""
-        self.target_16d_state = target_16d_state
+        self.target_14d_state = target_14d_state
 
         # 确保阶段管理器已初始化
         if not self.phases_initialized:
@@ -130,9 +118,9 @@ class MotionManagementRL(BaseMotionController):
         if self.phase_manager:
             for phase in self.phase_manager.phases:
                 if isinstance(phase, AutonomousControlPhase) and phase.controller:
-                    phase.controller.set_target(target_16d_state)
+                    phase.controller.set_target(target_14d_state)
 
-        print(f"Target shape set: {target_16d_state[:3]}...")
+        print(f"Target shape set: {target_14d_state[:3]}...")
 
     def update_motion_phase(self, current_state, t):
         """更新运动阶段，处理阶段转移和接触检测"""
@@ -177,7 +165,7 @@ class MotionManagementRL(BaseMotionController):
             if isinstance(current_phase, AutonomousControlPhase):
                 # ✅ 修改条件：增加对None状态的检查
                 need_estimation = (
-                        self.current_16d_state is None or  # 尚无有效状态
+                        self.current_14d_state is None or  # 尚无有效状态
                         current_state['step'] - self.last_estimation_step > self.estimation_interval or
                         self.force_estimation_next_step
                 )
@@ -186,15 +174,15 @@ class MotionManagementRL(BaseMotionController):
                     # 执行状态估计
                     estimation_result = self._perform_superquadric_estimation(current_state)
                     if estimation_result:
-                        # 计算16D特征向量
-                        self.current_16d_state = MotionControllerUtils.get_16d_feature_vector(
+                        # 计算14D特征向量
+                        self.current_14d_state = MotionControllerUtils.get_14d_feature_vector(
                             estimation_result['param_dict'],
                             estimation_result['geometric_features']
                         )
 
                         # 更新控制器状态
                         if current_phase.controller and hasattr(current_phase.controller, 'current_state'):
-                            current_phase.controller.current_state = self.current_16d_state
+                            current_phase.controller.current_state = self.current_14d_state
 
                         self.last_estimation_step = current_state['step']
                         self.force_estimation_next_step = False
@@ -211,8 +199,8 @@ class MotionManagementRL(BaseMotionController):
             estimation_result['time']
         )
 
-        # 计算16D特征向量
-        feature_16d = MotionControllerUtils.get_16d_feature_vector(
+        # 计算14D特征向量
+        feature_14d = MotionControllerUtils.get_14d_feature_vector(
             estimation_result['param_dict'],
             estimation_result['geometric_features']
         )
@@ -224,7 +212,7 @@ class MotionManagementRL(BaseMotionController):
             'contact_info': estimation_result['contact_info'],
             'parameters_11d': estimation_result['param_dict'],
             'geometric_features': estimation_result['geometric_features'],
-            'feature_16d': feature_16d,
+            'feature_14d': feature_14d,
             'point_cloud_file': point_cloud_filename
         }
 
@@ -250,7 +238,7 @@ class MotionManagementRL(BaseMotionController):
         self.superquadric_params_history.append(estimation_record)
 
         print(f"=== 状态估计完成 (步骤 {estimation_result['step']}) ===")
-        print(f"16维状态: {[f'{x:.3f}' for x in feature_16d[:5]]}...")
+        print(f"14维状态: {[f'{x:.3f}' for x in feature_14d[:5]]}...")
 
     def calculate_velocity(self):
         """计算速度 - 与基类接口兼容"""
@@ -286,7 +274,7 @@ class MotionManagementRL(BaseMotionController):
                 'control': vel_array[0, :].tolist() if vel_array.shape[0] > 0 else [0, 0, self.v_down],
                 'control_mode': self.control_mode,
                 'use_rl': self.use_rl,
-                'state': self.current_16d_state
+                'state': self.current_14d_state
             }
             self.control_history.append(control_record)
 
@@ -315,8 +303,8 @@ class MotionManagementRL(BaseMotionController):
         if estimation_result is None:
             return None
 
-        # 计算16D特征向量
-        self.current_16d_state = MotionControllerUtils.get_16d_feature_vector(
+        # 计算14D特征向量
+        self.current_14d_state = MotionControllerUtils.get_14d_feature_vector(
             estimation_result['param_dict'],
             estimation_result['geometric_features']
         )
@@ -330,7 +318,7 @@ class MotionManagementRL(BaseMotionController):
             'sq': estimation_result['sq'],
             'param_dict': estimation_result['param_dict'],
             'geometric_features': estimation_result['geometric_features'],
-            'feature_16d': self.current_16d_state
+            'feature_14d': self.current_14d_state
         }
 
     def print_state_info(self, current_state):
@@ -400,7 +388,8 @@ class MotionManagementRL(BaseMotionController):
                     'use_rl': record['use_rl']
                 }
                 if 'state' in record and record['state'] is not None:
-                    serializable_record['state'] = record['state']
+                    serializable_record['state'] = record['state'].tolist() if isinstance(record['state'],
+                                            np.ndarray) else record['state']
                 if 'cached' in record:
                     serializable_record['cached'] = record['cached']
                 serializable_history.append(serializable_record)
@@ -414,27 +403,5 @@ class MotionManagementRL(BaseMotionController):
             print(f"保存控制历史失败: {e}")
             return None
 
-    def save_custom_format_data(self):
-        """保存自定义格式数据"""
-        return MotionControllerUtils.save_custom_format_data(
-            self.output_dir,
-            self.superquadric_params_history,
-            data_type="mpc" if self.control_mode == 'mpc' else "general"
-        )
 
-    def finalize_simulation(self):
-        """完成仿真"""
-        try:
-            # 保存自定义格式数据
-            MotionControllerUtils.save_custom_format_data(
-                self.output_dir,
-                self.superquadric_params_history,
-                data_type="mpc" if self.control_mode == 'mpc' else "general"
-            )
 
-            # 保存控制历史
-            self.save_control_history()
-
-            print(f"RL/MPC仿真数据导出完成: {self.output_dir}")
-        except Exception as e:
-            print(f"导出数据时出错: {e}")

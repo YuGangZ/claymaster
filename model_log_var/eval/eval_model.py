@@ -112,59 +112,6 @@ def calculate_detailed_metrics_per_dimension(y_true, y_pred):
     return pd.DataFrame(metrics_list)
 
 
-def process_data_for_14dim(X, y):
-    """处理数据以适配14维状态"""
-    print("📊 处理数据以适应14维状态模型...")
-
-    print(f"原始X形状: {X.shape}")
-    print(f"原始y形状: {y.shape}")
-
-    # 分离原始状态和控制
-    original_state = X[:, :16]  # 原始16维状态
-    control = X[:, 16:]  # 3维控制
-
-    # 原始16维状态名称
-    dim_names_16 = [
-        'scale_a1', 'scale_a2', 'scale_a3',
-        'shape_epsilon1', 'shape_epsilon2',
-        'translation_x', 'translation_y', 'translation_z',
-        'euler_rx', 'euler_ry', 'euler_rz',
-        'volume', 'elongation', 'flatness', 'smoothness', 'convexity'
-    ]
-
-    print("\n原始16维状态:")
-    for i, name in enumerate(dim_names_16):
-        print(f"  索引 {i:2d}: {name}")
-
-    # 从16维状态中移除flatness(索引13)和convexity(索引15)
-    # 注意：保留smoothness(索引14)
-    indices_to_remove = [13, 15]  # flatness和convexity
-    state = np.delete(original_state, indices_to_remove, axis=1)
-
-    print(f"\n移除的维度: {[dim_names_16[i] for i in indices_to_remove]}")
-
-    # 同样处理目标y（下一帧状态）
-    y = np.delete(y, indices_to_remove, axis=1)
-
-    # 重新组合输入：14维状态 + 3维控制
-    X_processed = np.hstack([state, control])
-
-    print(f"\n处理后X形状: {X_processed.shape} (期望: (n, 17))")
-    print(f"处理后y形状: {y.shape} (期望: (n, 14))")
-
-    # 打印14维状态信息
-    dim_names_14 = []
-    for i, name in enumerate(dim_names_16):
-        if i not in indices_to_remove:
-            dim_names_14.append(name)
-
-    print(f"\n14维状态:")
-    for i, name in enumerate(dim_names_14):
-        print(f"  索引 {i:2d}: {name}")
-
-    return X_processed, y
-
-
 def test_and_save(model, save_dir, data_x_path, data_y_path, max_samples=5000, state_dim=14):
     """
     测试模型并保存所有结果 - 修改为适配14维状态
@@ -194,11 +141,8 @@ def test_and_save(model, save_dir, data_x_path, data_y_path, max_samples=5000, s
     print(f"   y形状: {y.shape}")
     print(f"   数据记录数: {len(X)}")
 
-    # 处理数据以适配14维状态
-    X_processed, y_processed = process_data_for_14dim(X, y)
-
-    # 使用处理后的数据作为测试集
-    X_test, y_test = X_processed, y_processed
+    # 使用查验后的数据作为测试集
+    X_test, y_test = X, y
 
     # 验证数据维度
     validate_data_dimensions(X_test, y_test, expected_state_dim=state_dim)

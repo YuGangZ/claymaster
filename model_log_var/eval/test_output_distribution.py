@@ -13,21 +13,16 @@ def load_training_data():
     """加载训练数据"""
     print("加载训练数据...")
 
-    X_train = np.load('training_data_X_rotation_clean_fixed.npy')
-    y_train = np.load('training_data_y_rotation_clean_fixed.npy')
+    X_train = np.load('training_data_X.npy')
+    y_train = np.load('training_data_y.npy')
 
     print(f"原始数据维度:")
     print(f"  X_train shape: {X_train.shape}")
     print(f"  y_train shape: {y_train.shape}")
 
     # 分离原始状态和控制
-    original_state_train = X_train[:, :16]  # 原始16维状态
-    control_train = X_train[:, 16:]  # 3维控制
-
-    # 从16维状态中移除flatness(索引13)和convexity(索引15)
-    indices_to_remove = [13, 15]
-    state_train = np.delete(original_state_train, indices_to_remove, axis=1)
-    y_train = np.delete(y_train, indices_to_remove, axis=1)
+    state_train = X_train[:, :14]  # 原始状态
+    control_train = X_train[:, 14:]  # 3维控制
 
     print(f"\n处理后数据维度:")
     print(f"  状态维度: {state_train.shape[1]} (期望14)")

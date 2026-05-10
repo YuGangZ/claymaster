@@ -1,0 +1,45 @@
+{
+  "step": 487,
+  "time": 0.974,
+  "contact_info": {
+    "contact_detected": true,
+    "min_distance": 0.008311854706597845,
+    "center_distance": 0.1256514936685562,
+    "distance_contact": true,
+    "mpm_contact": false,
+    "close_pairs": 13,
+    "estimated_force": 3.1622776601683795,
+    "penetration_depth": 0.001
+  },
+  "parameters_11d": {
+    "scale_a1": 0.09732421606697114,
+    "scale_a2": 0.07284366851722995,
+    "scale_a3": 0.07216662989919476,
+    "shape_epsilon1": 0.6453502880347363,
+    "shape_epsilon2": 1.4706047192848113,
+    "translation_x": 0.011285700703908677,
+    "translation_y": 0.02250639737123073,
+    "translation_z": 0.06340991310705224,
+    "euler_rx": 1.6216509193579718,
+    "euler_ry": -0.5689353570484137,
+    "euler_rz": 1.343398009293074
+  },
+  "geometric_features": {
+    "volume": 0.010232438521344039,
+    "elongation": 1.3486041429801767,
+    "flatness_top": 0.6583433885937822,
+    "smoothness": 0.9984638690948486,
+    "convexity": 0.5334717185977625
+  },
+  "control_velocity": {
+    "vel_x": -0.07946441383458012,
+    "vel_y": 0.2225363868627482,
+    "vel_z": 0.0038537979125976562
+  },
+  "delta_elastic": {
+    "delta_x": 0.02956680953502655,
+    "delta_y": 0.05687133967876434,
+    "delta_z": -0.1195237785577774
+  },
+  "point_cloud_file": "pointcloud_step000487_t0.974.ply"
+}

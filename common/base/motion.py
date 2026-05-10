@@ -78,6 +78,24 @@ class MotionControllerUtils:
         return params, param_vector
 
     @staticmethod
+    def get_14d_feature_vector(sq_params, geometric_features):
+        """Form 14D feature vector."""
+        sq_vector = [
+            sq_params['scale_a1'], sq_params['scale_a2'], sq_params['scale_a3'],
+            sq_params['shape_epsilon1'], sq_params['shape_epsilon2'],
+            sq_params['translation_x'], sq_params['translation_y'], sq_params['translation_z'],
+            sq_params['euler_rx'], sq_params['euler_ry'], sq_params['euler_rz']
+        ]
+
+        geometric_vector = [
+            geometric_features.get('volume', 0),
+            geometric_features.get('elongation', 1.0),
+            geometric_features.get('smoothness', 0.5)
+        ]
+
+        return sq_vector + geometric_vector
+
+    @staticmethod
     def save_point_cloud(points, output_dir, step, time):
         """Save point cloud data as PLY file."""
         try:

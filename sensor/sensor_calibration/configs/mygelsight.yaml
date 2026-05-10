@@ -1,0 +1,11 @@
+# Device Name
+device_name: "My GelSight"
+# Pixel Per Millimeter
+ppmm: 0.029
+# Desired Image Width and Height
+imgh: 256
+imgw: 256
+# Raw image width, height, and framerate
+raw_imgh: 960
+raw_imgw: 1280
+framerate: 30

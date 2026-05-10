@@ -20,7 +20,7 @@ def main():
                         help='输出目录路径')
     parser.add_argument('--interval', '-i', type=int, default=5,
                         help='数据保存间隔（仿真步数）')
-    parser.add_argument('--model-path', '-m', default='shape_predictor_best.pth',
+    parser.add_argument('--model-path', '-m', default='shape_predictor_best_log_var.pth',
                         help='MPC模型路径')
     # 新增参数：MPC时域（根据需要调整）
     parser.add_argument('--horizon', type=int, default=10,
@@ -41,14 +41,14 @@ def main():
         iterations=100  # 调整迭代次数
     )
     total_steps = 4000
-    # 目标形状（保持不变）
+    # 目标形状
     TARGET_SHAPE = np.array([
         0.065, 0.065, 0.065,  # scale_a1,2,3
         1.0, 1.0,  # shape_epsilon1,2
         0.0, 0.0, 0.0,  # translation_x,y,z
         0.0, 0.0, 0.0,  # euler_rx,ry,rz
         0.00019,  # volume
-        1.0, 0.0, 1.0, 1.0  # elongation, flatness, smoothness, convexity
+        1.0, 1.0  # elongation, smoothness
     ])
 
     mpc_controller.set_target(TARGET_SHAPE)
@@ -102,10 +102,6 @@ def main():
             break
 
     print("=== 仿真完成 ===")
-
-    # 最终数据导出
-    motion_controller.finalize_simulation()
-    motion_controller.save_custom_format_data()
 
     # 打印MPC控制统计
     print("\n=== MPC控制统计 ===")

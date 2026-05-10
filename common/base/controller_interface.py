@@ -5,7 +5,7 @@ import numpy as np
 class BaseController(ABC):
     """控制器抽象基类 - 解耦RL与具体实现"""
 
-    def __init__(self, state_dim: int = 16, control_dim: int = 3):
+    def __init__(self, state_dim: int = 14, control_dim: int = 3):
         self.state_dim = state_dim
         self.control_dim = control_dim
 

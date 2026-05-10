@@ -67,7 +67,7 @@ def clean_scale_shape_data():
         print(f"  清洗后 - 变化率均值: {np.mean(clean_change_ratio):.6f}")
 
     # 可视化清洗效果
-    visualize_cleaning_effect(X_scale_shape, y_scale_shape, X_clean, y_clean, clean_mask)
+    # visualize_cleaning_effect(X_scale_shape, y_scale_shape, X_clean, y_clean, clean_mask)
 
     return X_clean, y_clean
 

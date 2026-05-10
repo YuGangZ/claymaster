@@ -14,6 +14,10 @@ class ControlPhase(ABC):
         pass
 
 
+
+
+
+
 class ApproachPhase(ControlPhase):
     """下压接近阶段"""
 
@@ -38,9 +42,9 @@ class ApproachPhase(ControlPhase):
         contact_info = current_state.get('contact', {})
         contact_detected = contact_info.get('contact_detected', False)
 
-        if contact_detected:
-            penetration = contact_info.get('penetration_depth', 0)
-            print(f"  接触检测: 穿透深度 = {penetration:.4f} m")
+        # if contact_detected:
+        #     penetration = contact_info.get('penetration_depth', 0)
+        #     print(f"  接触检测: 穿透深度 = {penetration:.4f} m")
 
         return contact_detected
 
@@ -87,8 +91,8 @@ class AutonomousControlPhase(ControlPhase):
         if need_recomputation and hasattr(motion_controller, 'estimate_and_save_superquadric'):
             print(f"  Step {current_state['step']}: 执行状态估计...")
             estimation_result = motion_controller.estimate_and_save_superquadric(current_state)
-            if estimation_result and estimation_result.get('feature_16d') is not None:
-                motion_controller.current_16d_state = estimation_result.get('feature_16d')
+            if estimation_result and estimation_result.get('feature_14d') is not None:
+                motion_controller.current_14d_state = estimation_result.get('feature_14d')
                 print(f"    状态估计完成")
                 self.last_estimation_time = self.control_counter
                 self.initial_estimation_done = True
@@ -119,19 +123,18 @@ class AutonomousControlPhase(ControlPhase):
                 print(f"  Step {current_state['step']}: MPC计算控制...")
 
                 # 获取当前状态
-                current_16d_state = motion_controller.current_16d_state
-                if current_16d_state is None:
-                    print(f"    警告: current_16d_state为None，使用零状态")
-                    current_16d_state = np.zeros(16)
+                current_14d_state = motion_controller.current_14d_state
+                if current_14d_state is None:
+                    print(f"    警告: current_14d_state为None，使用零状态")
+                    current_14d_state = np.zeros(14)
 
                 # ============ RL计算子目标（如果启用） ============
-                if self.use_rl and self.rl_env and current_16d_state is not None:
+                if self.use_rl and self.rl_env and current_14d_state is not None:
                     try:
                         print(f"  Step {current_state['step']}: RL计算子目标...")
 
                         # 获取当前观测
-                        current_state_14d = self._convert_16d_to_14d(current_16d_state)
-                        self.rl_env.current_state = current_state_14d
+                        self.rl_env.current_state = current_14d_state
                         obs = self.rl_env._get_observation()
 
                         # 调用RL策略计算动作
@@ -141,23 +144,11 @@ class AutonomousControlPhase(ControlPhase):
                             # 将RL动作转换为子目标
                             if hasattr(self.rl_env, 'action_scale'):
                                 delta_shape = rl_action * self.rl_env.action_scale
-                                self.rl_sub_target = current_state_14d + delta_shape
+                                self.rl_sub_target = current_14d_state + delta_shape
 
                                 # 传递给控制器
                                 if hasattr(self.controller, 'set_sub_target'):
-                                    # 将14D转换回16D
-                                    sub_target_16d = np.zeros(16, dtype=np.float32)
-                                    sub_target_16d[0:3] = self.rl_sub_target[0:3]
-                                    sub_target_16d[3:5] = self.rl_sub_target[3:5]
-                                    sub_target_16d[5:8] = self.rl_sub_target[5:8]
-                                    sub_target_16d[8:11] = self.rl_sub_target[8:11]
-                                    sub_target_16d[11] = self.rl_sub_target[11]
-                                    sub_target_16d[12] = self.rl_sub_target[12]
-                                    sub_target_16d[13] = 0.0
-                                    sub_target_16d[14] = self.rl_sub_target[13]
-                                    sub_target_16d[15] = 1.0
-
-                                    self.controller.set_sub_target(sub_target_16d)
+                                    self.controller.set_sub_target(self.rl_sub_target)
                                     print(f"    RL计算完成: 子目标 = {self.rl_sub_target[:3]}...")
                                     self.last_rl_computation_time = self.control_counter
                     except Exception as e:
@@ -166,14 +157,14 @@ class AutonomousControlPhase(ControlPhase):
                 # ============ MPC计算控制 ============
                 # 如果没有RL子目标，使用最终目标
                 if not self.use_rl or self.rl_sub_target is None:
-                    target_state = motion_controller.target_16d_state
+                    target_state = motion_controller.target_4d_state
                     if target_state is not None and hasattr(self.controller, 'set_target'):
                         self.controller.set_target(target_state)
 
                 # 计算控制
                 contact_info = current_state.get('contact', {})
                 self.current_control = self.controller.control(
-                    current_state=current_16d_state,
+                    current_state=current_14d_state,
                     contact_info=contact_info
                 )
 
@@ -201,17 +192,6 @@ class AutonomousControlPhase(ControlPhase):
     def should_transition(self, current_state):
         return False  # 自主控制阶段不主动转移
 
-    def _convert_16d_to_14d(self, state_16d):
-        """将16维状态转换为14维状态"""
-        return np.array([
-            state_16d[0], state_16d[1], state_16d[2],  # scale (3)
-            state_16d[3], state_16d[4],  # shape (2)
-            state_16d[5], state_16d[6], state_16d[7],  # translation (3)
-            state_16d[8], state_16d[9], state_16d[10],  # rotation (3)
-            state_16d[11],  # volume (1)
-            state_16d[12],  # elongation (1)
-            state_16d[14]  # smoothness (1)
-        ], dtype=np.float32)
 
 
 class PhaseManager:

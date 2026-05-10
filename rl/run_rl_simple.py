@@ -64,7 +64,7 @@ def main():
         0.0, 0.0, 0.0,  # translation_x,y,z
         0.0, 0.0, 0.0,  # euler_rx,ry,rz
         0.002375,  # volume
-        1.0, 0.0, 1.0, 1.0  # elongation, flatness, smoothness, convexity
+        1.0, 1.0,  # elongation, smoothness
     ], dtype=np.float32)
 
     motion_controller.set_target_shape(FINAL_TARGET)
@@ -122,10 +122,10 @@ def main():
             motion_controller.print_state_info(current_state)
 
         # 检查是否达到最大步数或完成目标
-        if hasattr(motion_controller, 'current_16d_state') and motion_controller.current_16d_state is not None:
-            current_16d = motion_controller.current_16d_state
-            target_16d = FINAL_TARGET
-            distance = np.linalg.norm(current_16d - target_16d)
+        if hasattr(motion_controller, 'current_14d_state') and motion_controller.current_14d_state is not None:
+            current_14d = motion_controller.current_14d_state
+            target_14d = FINAL_TARGET
+            distance = np.linalg.norm(current_14d - target_14d)
 
             if distance < 0.05:  # 成功阈值
                 print(f"\n🎉 成功达到目标形状！距离: {distance:.4f}")
@@ -133,10 +133,8 @@ def main():
                 break
 
     # 9. 保存结果
-    print("\n仿真完成，保存数据...")
-    motion_controller.finalize_simulation()
     motion_controller.save_control_history()
-    motion_controller.save_custom_format_data()
+
 
     print(f"\n所有数据已保存到: {motion_controller.output_dir}")
 

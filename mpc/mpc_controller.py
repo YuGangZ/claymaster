@@ -90,17 +90,16 @@ class MPCController:
             else:
                 print("[验证] 模型输出在合理范围内")
 
-    def set_target(self, target_state_16d, relative_mode=True):
+    def set_target(self, target_state_14d, relative_mode=True):
         """设置最终目标状态 - 仅用于非RL模式
 
         Args:
-            target_state_16d: 16维最终目标状态
+            target_state_14d: 14维最终目标状态
             relative_mode: True表示相对模式（只关注比例），False表示绝对模式
         """
-        assert len(target_state_16d) == 16, f"最终目标必须是16维"
+        assert len(target_state_14d) == 14, f"最终目标必须是14维"
 
         self.relative_mode = relative_mode
-        target_state_14d = self._convert_16d_to_14d(target_state_16d)
 
         if relative_mode:
             self.target_ratios = np.array([1.0, 1.0, 1.0])
@@ -132,19 +131,16 @@ class MPCController:
             return None
 
     def control(self, current_state, contact_info=None):
-        """计算控制指令 - 输入为16维状态，转换为14维"""
+        """计算控制指令"""
         # 输入验证
-        measured_state_16d = current_state
-        if isinstance(measured_state_16d, list):
-            measured_state_16d = np.array(measured_state_16d, dtype=np.float32)
-        assert len(measured_state_16d) == 16, f"测量状态必须是16维"
+        measured_state_14d = current_state
+        if isinstance(measured_state_14d, list):
+            measured_state_14d = np.array(measured_state_14d, dtype=np.float32)
+        assert len(measured_state_14d) == 14, f"测量状态必须是14维"
 
-        if np.any(np.isnan(measured_state_16d)):
+        if np.any(np.isnan(measured_state_14d)):
             print("[错误] 测量状态包含NaN")
             return np.zeros(3)
-
-        # 将16维状态转换为14维
-        measured_state_14d = self._convert_16d_to_14d(measured_state_16d)
 
         # 更新当前状态
         self.current_state = measured_state_14d.copy()
@@ -196,18 +192,6 @@ class MPCController:
             self.last_control = control
 
         return control
-
-    def _convert_16d_to_14d(self, state_16d):
-        """将16维状态转换为14维状态"""
-        return np.array([
-            state_16d[0], state_16d[1], state_16d[2],  # scale (3)
-            state_16d[3], state_16d[4],  # shape (2)
-            state_16d[5], state_16d[6], state_16d[7],  # translation (3)
-            state_16d[8], state_16d[9], state_16d[10],  # rotation (3)
-            state_16d[11],  # volume (1)
-            state_16d[12],  # elongation (1)
-            state_16d[14]  # smoothness (1) - 总共14维
-        ])
 
     def get_status(self):
         """获取控制器状态"""

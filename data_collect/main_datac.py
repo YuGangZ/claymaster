@@ -127,9 +127,6 @@ def main():
 
     print("=== 仿真完成 ===")
 
-    # 最终分析和数据导出
-    motion_controller.finalize_simulation()
-
     # 执行最后一次超二次曲面估计（如果采样已启用）
     if motion_controller.sampling_enabled:
         print("\n=== 执行最终超二次曲面估计 ===")

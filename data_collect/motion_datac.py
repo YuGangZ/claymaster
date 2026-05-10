@@ -265,6 +265,19 @@ class MotionControllerDataCollection(BaseMotionController):
             'point_cloud_file': point_cloud_filename
         }
 
+        param = estimation_result['param_dict']
+        geo = estimation_result['geometric_features']
+        feature_14d = np.array([
+            param['scale_a1'], param['scale_a2'], param['scale_a3'],
+            param['shape_epsilon1'], param['shape_epsilon2'],
+            param['translation_x'], param['translation_y'], param['translation_z'],
+            param['euler_rx'], param['euler_ry'], param['euler_rz'],
+            geo['volume'], geo['elongation'], geo['smoothness']
+        ], dtype=np.float32)
+
+
+        self.current_14d_state = feature_14d
+
         # Save parameters
         param_filename = self.save_superquadric_params(
             estimation_record,
@@ -272,8 +285,8 @@ class MotionControllerDataCollection(BaseMotionController):
             estimation_result['time']
         )
 
-        # Update history
-        self.superquadric_params_history.append(estimation_record)
+        # # Update history
+        # self.superquadric_params_history.append(estimation_record)
 
         print(
             f"=== 实时数据保存完成 (步骤 {estimation_result['step']}, 接触深度: {estimation_result['contact_info'].get('penetration_depth', 0):.4f}m) ===")
@@ -349,21 +362,3 @@ class MotionControllerDataCollection(BaseMotionController):
             json.dump(summary_data, f, indent=2, ensure_ascii=False)
 
         print(f"汇总数据已导出: {summary_file}")
-
-    def finalize_simulation(self):
-        """Finalize simulation."""
-        try:
-            # Save custom format data
-            MotionControllerUtils.save_custom_format_data(
-                self.output_dir,
-                self.superquadric_params_history,
-                data_type="general"
-            )
-
-            # Save action history in random mode
-            if not self.use_traditional_mode and self.action_history:
-                MotionControllerUtils.save_action_history(self.output_dir, self.action_history)
-
-            print("所有监控数据已导出")
-        except Exception as e:
-            print(f"导出数据时出错: {e}")
