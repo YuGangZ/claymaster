@@ -4,6 +4,46 @@
 
 本项目是一个基于超二次曲面（Superquadric）的软体变形控制研究项目，主要研究如何通过机械臂与柔软物体的交互，实现对物体形状的精确控制。项目包含**分层强化学习（RL+MPC）**和**RL基线对比**两种方法。
 
+## 环境要求
+
+| 项目 | 当前环境版本 |
+|-----|-------------|
+| Python | 3.9+ |
+| PyTorch | 2.0.1+cu118 |
+| CUDA | 11.8 |
+| genesis-world | 0.2.1 |
+
+## 依赖包列表
+
+```txt
+# 核心依赖
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.23.0
+scipy>=1.9.0
+gymnasium>=0.29.0
+stable_baselines3>=2.7.0
+genesis-world>=0.2.0
+
+# 可视化与点云处理
+open3d>=0.19.0
+matplotlib>=3.8.0
+mayavi>=4.7.0
+trimesh>=3.23.0
+opencv-python>=4.11.0
+pyqt5>=5.15.0
+
+# 数据分析
+pandas>=2.0.0
+seaborn>=0.13.0
+scikit-learn>=1.3.0
+
+# 其他工具
+pyyaml>=6.0
+tqdm>=4.66.0
+tensorboard>=2.15.0
+```
+
 ## 项目结构
 
 ```
@@ -125,6 +165,7 @@ github_upload/
 - **弹性材料**：Neo-Hookean模型，用于传感器立方体
 - **弹塑性材料**：Von Mises屈服准则，用于被操作物体
 
+
 ### 4. 形状预测模型 (`model_log_var/`)
 
 基于深度学习的超二次曲面形状预测模型：
@@ -146,7 +187,6 @@ github_upload/
 - **14维状态表示**：包含尺度（3维）、形状参数（2维）、位置（3维）、姿态（3维）、几何参数（3维）
 - **支持相对模式和绝对模式**：灵活的目标设定方式
 
-
 ## 超二次曲面参数格式（14维）
 
 | 维度 | 参数类型 | 说明 |
@@ -156,3 +196,76 @@ github_upload/
 | 5-7 | 位置 | XYZ坐标 (translation_x, translation_y, translation_z) |
 | 8-10 | 姿态 | 欧拉角 (euler_rx, euler_ry, euler_rz) |
 | 11-13 | 几何参数 | 体积、伸长率、平滑度 |
+
+## 使用方法
+
+### 训练形状预测模型
+
+```bash
+cd model_log_var
+python train.py \
+    --epochs 100 \
+    --batch_size 32 \
+    --lr 0.001 \
+    --model_path ./shape_predictor_best.pth
+```
+
+### 运行分层RL训练（rl/）
+
+```bash
+cd rl
+python run_rl_simple.py \
+    --config config/rl_config.py \
+    --log_dir rl_training_logs \
+    --num_episodes 10000
+```
+
+### 运行基线RL训练（baseline/）
+
+```bash
+cd baseline
+python train_direct.py \
+    --config config.py \
+    --log_dir ./logs
+```
+
+### 运行MPC控制
+
+```bash
+cd mpc
+python main_mpc.py \
+    --model_path ../model_log_var/shape_predictor_best.pth \
+    --horizon 10 \
+    --iterations 100
+```
+
+### 数据收集
+
+```bash
+cd data_collect
+python main_datac.py \
+    --output_dir ./realtime_data_random \
+    --num_samples 1000
+```
+
+## 实验结果
+
+### 预训练模型
+
+项目提供了预训练的形状预测模型：
+- `model_log_var/shape_predictor_best.pth` - 最佳模型权重
+- `rl/shape_predictor.pth` - RL专用模型
+- `baseline/shape_predictor.pth` - 基线专用模型
+
+### 实验数据
+
+- `data_collect/realtime_data_random/`：随机变形实验数据
+- `mpc/realtime_data_demo_cylinder/`：圆柱体变形演示数据（含200+帧点云和超二次曲面参数）
+
+### 评估结果
+
+- `model_log_var/eval/plots/`：模型评估图表（不确定性可视化）
+- `model_log_var/eval/test_results_14dim/`：14维预测结果统计
+- `rl/rl_training_logs/`：分层RL训练日志和检查点（21000+步）
+- `mpc/mpc_eval_14d/`：MPC控制评估结果
+
