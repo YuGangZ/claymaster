@@ -5,12 +5,6 @@ from gymnasium import spaces
 from collections import deque
 
 class DeformationRLEnvDirect(gym.Env):
-    """
-    纯RL环境：直接输出3维速度控制
-    观测：45维 = 14(current) + 14(target) + 3(ee_pos) + 14(uncertainty)
-    动作：3维连续速度
-    不确定性：来自 ShapePredictor 模型的预测方差
-    """
     def __init__(self, motion_controller, target_shape, config):
         super().__init__()
         self.motion_ctrl = motion_controller
@@ -40,6 +34,8 @@ class DeformationRLEnvDirect(gym.Env):
         self._initial_volume = None
         self._last_valid_state = None
         self.current_step = 0
+        self._physics_step = 0
+        self.dt = self.motion_ctrl.scene.sim_options.dt
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -48,6 +44,7 @@ class DeformationRLEnvDirect(gym.Env):
             self.motion_ctrl.reset()
 
         self.current_step = 0
+        self._physics_step = 0
         self._steps_since_last_estimation = 0
         self.prediction_error_buffer.clear()
         self._initial_volume = None
@@ -60,18 +57,23 @@ class DeformationRLEnvDirect(gym.Env):
 
     def step(self, action):
         prev_state = self.current_state.copy()
-        prev_uncertainty = self.uncertainty_estimate.copy()
-
-        # 获取基于当前状态-动作的预测不确定性
         pred_uncertainty = self._get_prediction_uncertainty(prev_state, action)
 
-        # 执行连续多个物理步
-        for phys_step in range(self.control_steps):
-            vel_array = np.zeros((self.motion_ctrl.initial_particles.shape[0], 3))
-            vel_array[:, :] = action
+        # 执行多个物理步
+        for _ in range(self.control_steps):
+            # 设置RL动作
+            self.motion_ctrl.current_rl_action = action
+            # 获取当前状态
+            sys_state = self.motion_ctrl.get_system_state(
+                self._physics_step, self._physics_step * self.dt, force_update=False
+            )
+            if not isinstance(sys_state, dict):
+                print(f"[警告] get_system_state 返回非字典: {type(sys_state)}，跳过")
+                continue
+            vel_array = self.motion_ctrl.compute_control_velocity(sys_state)
             self.motion_ctrl.apply_velocity(vel_array)
             self.motion_ctrl.scene.step()
-
+            self._physics_step += 1
             self._steps_since_last_estimation += 1
             if self._steps_since_last_estimation >= self._estimation_step_interval:
                 self._update_shape_estimate()
@@ -80,13 +82,11 @@ class DeformationRLEnvDirect(gym.Env):
         self._update_shape_estimate()
         new_state = self.current_state.copy()
 
-        # 记录预测误差（如果之前有预测值）
         if self.previous_state is not None:
             pred_error = new_state - self.previous_state
             self.prediction_error_buffer.append(pred_error)
 
         self.previous_state = new_state
-        # 使用模型预测的不确定性作为当前不确定性估计
         self.uncertainty_estimate = pred_uncertainty
 
         reward, terminated = self._compute_reward(prev_state, new_state)
@@ -96,47 +96,50 @@ class DeformationRLEnvDirect(gym.Env):
         return self._get_observation(), reward, terminated, truncated, self._get_info()
 
     def _get_prediction_uncertainty(self, state, action):
-        """调用运动控制器中的 ShapePredictor 获取不确定性"""
         if hasattr(self.motion_ctrl, 'predict_next_state_and_uncertainty'):
             _, uncertainty = self.motion_ctrl.predict_next_state_and_uncertainty(state, action)
             return uncertainty
-        else:
-            # 降级方案
-            return np.ones(self.state_dim, dtype=np.float32) * 0.01
+        return np.ones(self.state_dim, dtype=np.float32) * 0.01
 
     def _update_shape_estimate(self):
-        """执行一次形状估计，更新 current_state"""
         try:
             sys_state = self.motion_ctrl.get_system_state(
-                step=self.motion_ctrl.scene.step_counter,
-                time=self.motion_ctrl.scene.time,
+                step=self._physics_step,
+                time=self._physics_step * self.dt,
                 force_update=True
             )
+            if not isinstance(sys_state, dict):
+                print(f"[警告] get_system_state 返回非字典: {type(sys_state)}")
+                return
             if sys_state.get('contact', {}).get('contact_detected', False):
                 result = self.motion_ctrl.estimate_and_save_superquadric(sys_state)
                 if result and 'feature_14d' in result:
-                    state = result['feature_14d'].astype(np.float32)
+                    state = result['feature_14d']
+                    # 确保是 numpy 数组
+                    if isinstance(state, (list, tuple)):
+                        state = np.array(state, dtype=np.float32)
                     if len(state) == self.state_dim and np.all(np.abs(state[:3]) > 1e-6):
                         self._last_valid_state = state.copy()
                         self.current_state = state
                         return
         except Exception as e:
             print(f"形状估计失败: {e}")
-
         if self._last_valid_state is not None:
             self.current_state = self._last_valid_state.copy()
 
     def _get_current_shape(self, force_estimation=False):
         if force_estimation:
             sys_state = self.motion_ctrl.get_system_state(
-                step=self.motion_ctrl.scene.step_counter,
-                time=self.motion_ctrl.scene.time,
+                step=self._physics_step,
+                time=self._physics_step * self.dt,
                 force_update=True
             )
-            if sys_state.get('contact', {}).get('contact_detected', False):
+            if isinstance(sys_state, dict) and sys_state.get('contact', {}).get('contact_detected', False):
                 result = self.motion_ctrl.estimate_and_save_superquadric(sys_state)
                 if result and 'feature_14d' in result:
-                    state = result['feature_14d'].astype(np.float32)
+                    state = result['feature_14d']
+                    if isinstance(state, (list, tuple)):
+                        state = np.array(state, dtype=np.float32)
                     if len(state) == self.state_dim and np.all(np.abs(state[:3]) > 1e-6):
                         self._last_valid_state = state.copy()
                         return state
@@ -175,7 +178,6 @@ class DeformationRLEnvDirect(gym.Env):
 
     def _compute_reward(self, prev_state, new_state):
         weights = self.config["reward_weights"]
-
         dist_old = np.linalg.norm(prev_state - self.target_shape)
         dist_new = np.linalg.norm(new_state - self.target_shape)
         reward_goal = (dist_old - dist_new) * weights["goal"]

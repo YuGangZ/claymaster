@@ -489,31 +489,31 @@ class RLDeformationTrainer:
 
         print(f"评估结果已保存: {eval_file}")
 
-        # 生成评估可视化
-        if visualize and evaluation_data['actions_history']:
-            try:
-                from rl.eval.rl_visualizer import RLTrainingVisualizer
-                visualizer = RLTrainingVisualizer(
-                    output_dir=self.log_dir / "evaluation_visualizations"
-                )
-
-                # 绘制动作分布
-                visualizer.plot_action_distribution(evaluation_data['actions_history'])
-
-                # 如果有episode数据，绘制episode分析
-                if len(evaluation_data['episodes']) > 0:
-                    episode_data = {
-                        'states': episode_states if 'episode_states' in locals() else [],
-                        'rewards': [ep['reward'] for ep in evaluation_data['episodes']],
-                        'actions': evaluation_data['actions_history'],
-                        'target_state': self.target_shape.tolist()
-                    }
-                    visualizer.plot_episode_analysis(episode_data)
-
-                print(f"评估可视化已保存: {self.log_dir / 'evaluation_visualizations'}")
-
-            except Exception as e:
-                print(f"评估可视化失败: {e}")
+        # # 生成评估可视化
+        # if visualize and evaluation_data['actions_history']:
+        #     try:
+        #         from rl.eval.rl_visualizer import RLTrainingVisualizer
+        #         visualizer = RLTrainingVisualizer(
+        #             output_dir=self.log_dir / "evaluation_visualizations"
+        #         )
+        #
+        #         # 绘制动作分布
+        #         visualizer.plot_action_distribution(evaluation_data['actions_history'])
+        #
+        #         # 如果有episode数据，绘制episode分析
+        #         if len(evaluation_data['episodes']) > 0:
+        #             episode_data = {
+        #                 'states': episode_states if 'episode_states' in locals() else [],
+        #                 'rewards': [ep['reward'] for ep in evaluation_data['episodes']],
+        #                 'actions': evaluation_data['actions_history'],
+        #                 'target_state': self.target_shape.tolist()
+        #             }
+        #             visualizer.plot_episode_analysis(episode_data)
+        #
+        #         print(f"评估可视化已保存: {self.log_dir / 'evaluation_visualizations'}")
+        #
+        #     except Exception as e:
+        #         print(f"评估可视化失败: {e}")
 
         return success_rate, avg_reward, avg_distance, avg_uncertainty
 
